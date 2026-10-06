@@ -1,13 +1,18 @@
-# GS Baseball 8-Bit Ballpark
+# GS Baseball 8-Bit Ballpark — Full Game
 
-Standalone mobile-friendly retro baseball mini-game.
+Expanded standalone retro baseball game.
 
-## Modes
-- Batting: time the swing for hits, doubles, and home runs.
-- Pitching: choose Fastball, Changeup, or Curve and attack the strike zone.
-- Fielding: move the selected player to the ball and make the play.
+Features:
+- 3/6/7 inning games and scoreboard
+- GS batting order using the supplied roster
+- Batting with timing-based hits, doubles and home runs
+- Baserunners and run scoring
+- Pitch selection: fastball, changeup, curve
+- Balls, strikes, walks and strikeouts
+- Interactive fielding and throwing to bases
+- Defensive player display
+- Opponent selection
+- Baseball-IQ challenges
+- Mobile-first, no backend required
 
-The initial roster is the GS Baseball roster supplied for the project. The app is plain HTML/CSS/JavaScript and can be hosted directly with GitHub Pages.
-
-## Add to a repository
-Upload the contents of this ZIP to the root of the empty repository, then enable GitHub Pages from the main branch / root.
+Upload these files to the root of the empty GitHub repository and enable GitHub Pages.

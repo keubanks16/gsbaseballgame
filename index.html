@@ -1,77 +1,43 @@
-<!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>GS Baseball — 8-Bit Ballpark</title><link rel="manifest" href="manifest.webmanifest">
-<style>
-:root{--navy:#071a3d;--blue:#6bb7f5;--white:#f5f8ff;--grass:#27874c;--dirt:#c98b55;--ink:#07101f}
-*{box-sizing:border-box}body{margin:0;background:#030c20;color:var(--white);font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
-header{padding:14px 16px;background:var(--navy);border-bottom:2px solid #163c72;display:flex;justify-content:space-between;gap:10px;align-items:center}
-.brand{font-weight:900;letter-spacing:1px}.brand b{color:var(--blue)}.pill{font-size:12px;border:1px solid #31588b;padding:6px 9px;border-radius:999px}
-main{max-width:900px;margin:auto;padding:14px}.panel{background:#0b2149;border:1px solid #244b80;border-radius:16px;padding:14px;margin-bottom:12px}
-.controls{display:flex;flex-wrap:wrap;gap:8px;align-items:center}button,select{font:inherit;min-height:44px;border-radius:10px;border:1px solid #31588b;background:#102d5c;color:white;padding:9px 12px}
-button.primary{background:#1774bd;font-weight:900}button.active{outline:2px solid var(--blue)}select{flex:1;min-width:190px}
-#fieldWrap{position:relative;max-width:720px;margin:auto;aspect-ratio:1/1;overflow:hidden;border:4px solid #163c72;border-radius:18px;background:#27874c}
-canvas{width:100%;height:100%;display:block;image-rendering:pixelated;touch-action:none}
-.hud{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin-top:10px}.stat{background:#071a3d;border:1px solid #244b80;border-radius:10px;text-align:center;padding:8px}.stat small{display:block;color:#91a9c9}.stat b{font-size:18px;color:#fff}
-.action{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px}.action button{font-weight:900}.wide{grid-column:span 3}
-.help{font-size:12px;color:#a9bad2;line-height:1.5}.msg{min-height:42px;text-align:center;font-weight:900;color:#fff;padding:10px}
-@media(max-width:520px){main{padding:8px}.panel{padding:10px}.hud{grid-template-columns:repeat(2,1fr)}header{font-size:13px}}
-</style></head>
-<body><header><div class="brand">GS BASEBALL <b>8-BIT BALLPARK</b></div><span class="pill">PLAY • LEARN • COMPETE</span></header>
-<main>
-<section class="panel controls">
-<select id="player"></select>
-<button data-mode="bat" class="mode active">BAT</button><button data-mode="pitch" class="mode">PITCH</button><button data-mode="field" class="mode">FIELD</button>
-</section>
-<div id="fieldWrap"><canvas id="game" width="640" height="640"></canvas></div>
-<div class="msg" id="msg">Pick your player and step to the plate!</div>
-<section class="hud">
-<div class="stat"><small>PLAYER</small><b id="who">#1 MJ</b></div>
-<div class="stat"><small>SCORE</small><b id="score">0</b></div>
-<div class="stat"><small>HITS / OUTS</small><b id="ho">0 / 0</b></div>
-<div class="stat"><small>STREAK</small><b id="streak">0</b></div>
-</section>
-<section class="panel">
-<div class="action" id="actions"></div>
-<p class="help" id="help"></p>
-</section>
-</main>
-<script>
-const roster=[{"num": "1", "name": "Micah John Eubanks", "pos": "2B"}, {"num": "2", "name": "Mason Meharg", "pos": "C"}, {"num": "3", "name": "Liam Harris", "pos": "LF"}, {"num": "4", "name": "Cas Hortman", "pos": "LC"}, {"num": "5", "name": "Landon Wilson", "pos": "RF"}, {"num": "6", "name": "ColtonLee Crosby", "pos": "1B"}, {"num": "7", "name": "Wyatt Kell", "pos": "SS"}, {"num": "13", "name": "Cash Pitts", "pos": "3B"}, {"num": "14", "name": "Wes Renfroe", "pos": "RF"}, {"num": "18", "name": "Maverick Roland", "pos": "RC"}, {"num": "27", "name": "Kade Wilson", "pos": "OF"}, {"num": "31", "name": "SJ Fairchild", "pos": "P"}];
-const cv=document.querySelector('#game'),c=cv.getContext('2d');c.imageSmoothingEnabled=false;
-const sel=document.querySelector('#player'),msg=document.querySelector('#msg'),actions=document.querySelector('#actions');
-roster.forEach((p,i)=>{let o=document.createElement('option');o.value=i;o.textContent=`#${p.num} ${p.name} · ${p.pos}`;sel.appendChild(o)});
-let mode='bat',score=0,hits=0,outs=0,streak=0,ball=null,anim=0,fieldBall={x:320,y:360},fielder={x:320,y:450};
-const short=n=>n.split(' ')[0]==='Micah'?'MJ':n.split(' ')[0];
-function diamond(){
- c.fillStyle='#27874c';c.fillRect(0,0,640,640);
- c.fillStyle='#c98b55';c.beginPath();c.moveTo(320,570);c.lineTo(90,330);c.lineTo(320,105);c.lineTo(550,330);c.closePath();c.fill();
- c.fillStyle='#e7c28e';c.beginPath();c.moveTo(320,535);c.lineTo(135,330);c.lineTo(320,145);c.lineTo(505,330);c.closePath();c.fill();
- c.fillStyle='#27874c';c.beginPath();c.arc(320,330,150,0,Math.PI*2);c.fill();
- [[320,525],[145,330],[320,150],[495,330]].forEach(([x,y])=>{c.fillStyle='white';c.fillRect(x-8,y-8,16,16)});
- c.strokeStyle='rgba(255,255,255,.35)';c.lineWidth=3;c.beginPath();c.moveTo(320,570);c.lineTo(45,285);c.moveTo(320,570);c.lineTo(595,285);c.stroke();
-}
-function person(x,y,label,bat=false){c.fillStyle='#071a3d';c.fillRect(x-8,y-22,16,22);c.fillStyle='#6bb7f5';c.fillRect(x-7,y-31,14,10);c.fillStyle='white';c.font='bold 13px monospace';c.textAlign='center';c.fillText(label,x,y-37);if(bat){c.strokeStyle='#e8c38c';c.lineWidth=5;c.beginPath();c.moveTo(x+8,y-20);c.lineTo(x+25,y-43);c.stroke()}}
-function draw(){
- diamond(); const p=roster[+sel.value||0];
- if(mode==='bat'){person(320,548,`#${p.num}`,true);person(320,355,'P'); if(ball){c.fillStyle='white';c.fillRect(ball.x-4,ball.y-4,8,8)}}
- if(mode==='pitch'){person(320,355,`#${p.num}`);person(320,548,'BAT',true);c.strokeStyle='white';c.strokeRect(285,465,70,70);if(ball){c.fillStyle='white';c.fillRect(ball.x-4,ball.y-4,8,8)}}
- if(mode==='field'){person(fielder.x,fielder.y,`#${p.num}`);c.fillStyle='white';c.fillRect(fieldBall.x-5,fieldBall.y-5,10,10)}
-}
-function updateHud(){let p=roster[+sel.value||0];document.querySelector('#who').textContent=`#${p.num} ${short(p.name)}`;document.querySelector('#score').textContent=score;document.querySelector('#ho').textContent=`${hits} / ${outs}`;document.querySelector('#streak').textContent=streak}
-function setMode(m){mode=m;ball=null;document.querySelectorAll('.mode').forEach(b=>b.classList.toggle('active',b.dataset.mode===m));build();draw()}
-function build(){
- actions.innerHTML='';
- const p=roster[+sel.value||0];
- if(mode==='bat'){actions.innerHTML='<button class="primary wide" id="swing">SWING!</button>';document.querySelector('#help').textContent='Time your swing as the pitch reaches home plate. Better timing = harder contact.';msg.textContent=`#${p.num} ${short(p.name)} is batting.`;document.querySelector('#swing').onclick=swing;startPitch()}
- if(mode==='pitch'){actions.innerHTML='<button data-p="fast">FASTBALL</button><button data-p="change">CHANGEUP</button><button data-p="curve">CURVE</button><button class="wide primary" id="throw">PITCH</button>';document.querySelector('#help').textContent='Choose a pitch, then tap PITCH. Hit the strike zone for points.';let pitch='fast';actions.querySelectorAll('[data-p]').forEach(b=>b.onclick=()=>{pitch=b.dataset.p;actions.querySelectorAll('[data-p]').forEach(x=>x.classList.toggle('active',x===b))});document.querySelector('#throw').onclick=()=>throwPitch(pitch)}
- if(mode==='field'){actions.innerHTML='<button data-d="l">◀ LEFT</button><button data-d="u">▲ UP</button><button data-d="r">RIGHT ▶</button><button data-d="dl">↙</button><button class="primary" id="glove">GLOVE!</button><button data-d="dr">↘</button>';document.querySelector('#help').textContent='Move your fielder to the ball, then tap GLOVE. Get close enough to make the play.';newGrounder();actions.querySelectorAll('[data-d]').forEach(b=>b.onclick=()=>move(b.dataset.d));document.querySelector('#glove').onclick=field}
- updateHud()
-}
-function startPitch(){if(mode!=='bat')return;ball={x:320,y:355};clearInterval(anim);anim=setInterval(()=>{if(mode!=='bat'){clearInterval(anim);return}ball.y+=7;if(ball.y>565){clearInterval(anim);outs++;streak=0;msg.textContent='Strike! You watched it go by.';updateHud();setTimeout(startPitch,650)}draw()},35)}
-function swing(){if(!ball)return;let d=Math.abs(ball.y-525);clearInterval(anim);if(d<24){hits++;streak++;let bases=d<8?4:d<15?2:1;score+=bases;msg.textContent=bases===4?'💥 HOME RUN!':bases===2?'Double! Great swing!':'Base hit!';}else{outs++;streak=0;msg.textContent='Swing and miss! Watch the timing.'}ball=null;updateHud();draw();setTimeout(startPitch,700)}
-function throwPitch(type){let accuracy=Math.random(),good=accuracy>.28;ball={x:good?320+(Math.random()*45-22):250+Math.random()*140,y:355};let speed=type==='change'?5:type==='curve'?7:9;clearInterval(anim);anim=setInterval(()=>{ball.y+=speed;ball.x+=(type==='curve'?1.2:0);if(ball.y>=500){clearInterval(anim);if(ball.x>285&&ball.x<355){score+=2;streak++;msg.textContent='STRIKE! Painted the zone.'}else{streak=0;msg.textContent='Ball — work the zone.'}ball=null;updateHud();draw()}draw()},30)}
-function newGrounder(){fieldBall={x:110+Math.random()*420,y:180+Math.random()*250};fielder={x:320,y:500};msg.textContent='Ball in play! Go get it.';draw()}
-function move(d){let n=32;if(d.includes('l'))fielder.x-=n;if(d.includes('r'))fielder.x+=n;if(d==='u'||d==='dl'||d==='dr')fielder.y-=n;fielder.x=Math.max(70,Math.min(570,fielder.x));fielder.y=Math.max(150,Math.min(530,fielder.y));draw()}
-function field(){let d=Math.hypot(fielder.x-fieldBall.x,fielder.y-fieldBall.y);if(d<55){score+=3;streak++;msg.textContent='⚾ CLEAN PLAY! You made the out.';updateHud();setTimeout(newGrounder,650)}else{streak=0;msg.textContent='Not close enough — get your glove to the ball!';updateHud()}}
-document.querySelectorAll('.mode').forEach(b=>b.onclick=()=>setMode(b.dataset.mode));sel.onchange=()=>{updateHud();build();draw()};build();draw();
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>GS Baseball — 8-Bit Ballpark</title><link rel="manifest" href="manifest.webmanifest"><style>
+:root{--n:#061632;--p:#0b2149;--b:#6bb7f5;--w:#f7fbff;--m:#9bb0cc;--line:#244b80;--g:#27874c;--d:#c98b55}
+*{box-sizing:border-box}body{margin:0;background:#030b1c;color:var(--w);font-family:ui-monospace,SFMono-Regular,Menlo,monospace}header{padding:12px 14px;background:var(--n);border-bottom:2px solid #173e72;display:flex;justify-content:space-between;align-items:center}.logo{font-weight:900}.logo b{color:var(--b)}main{max-width:900px;margin:auto;padding:10px}.card{background:var(--p);border:1px solid var(--line);border-radius:14px;padding:11px;margin-bottom:9px}.row{display:flex;gap:7px;align-items:center;flex-wrap:wrap}.grow{flex:1;min-width:0}button,select{font:inherit;color:white;background:#102d5c;border:1px solid #31588b;border-radius:9px;min-height:43px;padding:8px 10px}button.primary,.active{background:#1676bf;font-weight:900}.scoreboard{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;text-align:center}.team{font-weight:900;font-size:16px}.score{font-size:27px;font-weight:900;color:var(--b);padding:0 14px}.mini{font-size:11px;color:var(--m)}.lights b{display:inline-block;width:10px;height:10px;border-radius:50%;background:#263d5f;margin:0 2px}.lights b.on{background:#f3d05b}#wrap{aspect-ratio:1/1;max-width:700px;margin:auto;border:3px solid #173e72;border-radius:14px;overflow:hidden;background:var(--g)}canvas{display:block;width:100%;height:100%;image-rendering:pixelated;touch-action:none}.actions{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:9px}.actions button{font-weight:800}.wide{grid-column:span 4}.msg{text-align:center;min-height:40px;padding:9px;font-weight:900}.bases{letter-spacing:4px}.lineup{max-height:190px;overflow:auto}.lineup div{display:flex;justify-content:space-between;padding:5px;border-bottom:1px solid #1d3b67;font-size:12px}.iq{border-left:4px solid var(--b)}.hidden{display:none}@media(max-width:500px){main{padding:6px}.actions{grid-template-columns:repeat(3,1fr)}.wide{grid-column:span 3}.score{font-size:22px}.card{padding:9px}}
+</style></head><body><header><div class="logo">GS BASEBALL <b>8-BIT BALLPARK</b></div><span class="mini">FULL GAME</span></header><main>
+<section class="card row"><label class="grow">Opponent <select id="opp"></select></label><label class="grow">Innings <select id="innings"><option>3</option><option selected>6</option><option>7</option></select></label><button id="new" class="primary">NEW GAME</button></section>
+<section class="card scoreboard"><div><div class="team">GS BASEBALL</div><div class="mini" id="batName">At bat</div></div><div><div class="score"><span id="us">0</span> - <span id="them">0</span></div><div class="mini"><span id="half">TOP</span> <span id="inn">1</span> · OUTS <span id="outs">0</span></div><div class="mini lights">B <span id="balls"></span> S <span id="strikes"></span></div></div><div><div class="team" id="oppName">BULLDOGS</div><div class="mini bases" id="bases">◇ ◇ ◇</div></div></section>
+<div id="wrap"><canvas id="game" width="640" height="640"></canvas></div>
+<div class="msg" id="msg">Tap START AT-BAT to play.</div>
+<section class="card"><div class="row"><button class="primary grow" id="mainAction">START AT-BAT</button><button id="iqBtn">BASEBALL IQ</button><button id="lineupBtn">LINEUP</button></div><div class="actions" id="actions"></div></section>
+<section class="card iq hidden" id="iq"><b>BASEBALL IQ CHALLENGE</b><p id="iqQ"></p><div class="actions" id="iqA"></div></section>
+<section class="card hidden" id="lineup"><b>GS BATTING ORDER / DEFENSE</b><div class="lineup" id="lineupList"></div></section>
+</main><script>
+const R=[{"num": "1", "name": "Micah John Eubanks", "pos": "2B"}, {"num": "2", "name": "Mason Meharg", "pos": "C"}, {"num": "3", "name": "Liam Harris", "pos": "LF"}, {"num": "4", "name": "Cas Hortman", "pos": "LC"}, {"num": "5", "name": "Landon Wilson", "pos": "RF"}, {"num": "6", "name": "ColtonLee Crosby", "pos": "1B"}, {"num": "7", "name": "Wyatt Kell", "pos": "SS"}, {"num": "13", "name": "Cash Pitts", "pos": "3B"}, {"num": "14", "name": "Wes Renfroe", "pos": "RF"}, {"num": "18", "name": "Maverick Roland", "pos": "RC"}, {"num": "27", "name": "Kade Wilson", "pos": "OF"}, {"num": "31", "name": "SJ Fairchild", "pos": "P"}],OPPS=["Bulldogs", "Tigers", "Warriors", "Dirt Dogs", "Bandits"]; const $=s=>document.querySelector(s),cv=$('#game'),c=cv.getContext('2d');c.imageSmoothingEnabled=false;
+OPPS.forEach(x=>$('#opp').add(new Option(x,x))); let G={},timer=0,ball=null,fieldMode=false,fielder={x:320,y:440},target=null;
+const first=n=>n.split(' ')[0]==='Micah'?'MJ':n.split(' ')[0];
+function reset(){clearInterval(timer);G={inning:1,half:0,outs:0,balls:0,strikes:0,us:0,them:0,bases:[null,null,null],batter:0,innings:+$('#innings').value,over:false};ball=null;fieldMode=false;$('#oppName').textContent=$('#opp').value.toUpperCase();msg('New game! GS Baseball is hitting first.');sync();draw()}
+function diamond(){c.fillStyle='#27874c';c.fillRect(0,0,640,640);c.fillStyle='#c98b55';c.beginPath();c.moveTo(320,575);c.lineTo(80,330);c.lineTo(320,90);c.lineTo(560,330);c.closePath();c.fill();c.fillStyle='#e9c590';c.beginPath();c.moveTo(320,535);c.lineTo(130,330);c.lineTo(320,140);c.lineTo(510,330);c.closePath();c.fill();c.fillStyle='#27874c';c.beginPath();c.arc(320,330,145,0,Math.PI*2);c.fill();[[320,525],[145,330],[320,145],[495,330]].forEach(([x,y])=>{c.fillStyle='#fff';c.fillRect(x-8,y-8,16,16)})}
+function guy(x,y,t){c.fillStyle='#071a3d';c.fillRect(x-8,y-21,16,21);c.fillStyle='#6bb7f5';c.fillRect(x-7,y-30,14,10);c.fillStyle='white';c.font='bold 12px monospace';c.textAlign='center';c.fillText(t,x,y-35)}
+function draw(){diamond();let spots=[[320,355],[485,330],[420,230],[320,175],[220,230],[155,330],[200,390],[440,390],[320,510]];if(G.half===1)spots.forEach((q,i)=>guy(q[0],q[1],i<R.length?'#'+R[i].num:'GS'));else{guy(320,545,'#'+R[G.batter%R.length].num);guy(320,355,'P')} if(fieldMode)guy(fielder.x,fielder.y,'YOU');if(ball){c.fillStyle='white';c.fillRect(ball.x-5,ball.y-5,10,10)}if(target){c.strokeStyle='#fff';c.strokeRect(target.x-12,target.y-12,24,24)}}
+function lights(id,n,max){let s='';for(let i=0;i<max;i++)s+=`<b class="${i<n?'on':''}"></b>`;$('#'+id).innerHTML=s}
+function sync(){ $('#us').textContent=G.us;$('#them').textContent=G.them;$('#inn').textContent=G.inning;$('#half').textContent=G.half?'BOT':'TOP';$('#outs').textContent=G.outs;lights('balls',G.balls,3);lights('strikes',G.strikes,2);$('#bases').textContent=G.bases.map(x=>x?'◆':'◇').reverse().join(' ');$('#batName').textContent=G.half?'GS Baseball fielding':`#${R[G.batter%R.length].num} ${first(R[G.batter%R.length].name)} batting`;$('#mainAction').textContent=G.over?'NEW GAME':G.half?'PITCH TO BATTER':'START AT-BAT';draw()}
+function msg(x){$('#msg').textContent=x}
+function nextHalf(){G.outs=G.balls=G.strikes=0;G.bases=[null,null,null];if(G.half===0)G.half=1;else{G.half=0;G.inning++}if(G.inning>G.innings){G.over=true;msg(`FINAL — GS ${G.us}, ${$('#opp').value} ${G.them}`)}sync()}
+function out(){G.outs++;G.balls=G.strikes=0;if(G.half===0)G.batter++;if(G.outs>=3)nextHalf();else sync()}
+function walk(){advance(1);G.balls=G.strikes=0;G.batter++;sync()}
+function advance(n){if(n===4){G.us++;G.bases.forEach(x=>{if(x)G.us++});G.bases=[null,null,null];return}for(let step=0;step<n;step++){if(G.bases[2])G.us++;G.bases[2]=G.bases[1];G.bases[1]=G.bases[0];G.bases[0]=null}G.bases[n-1]=R[G.batter%R.length].num}
+function atBat(){if(G.over){reset();return}if(G.half){pitchMode();return}fieldMode=false;$('#actions').innerHTML='<button class="wide primary" id="swing">SWING!</button>';msg('Pitch coming... time your swing!');ball={x:320,y:355};clearInterval(timer);timer=setInterval(()=>{ball.y+=7;if(ball.y>565){clearInterval(timer);strike('Called strike!')}draw()},36);$('#swing').onclick=swing}
+function swing(){if(!ball)return;let d=Math.abs(ball.y-525);clearInterval(timer);ball=null;if(d<28){let bases=d<8?4:d<15?2:1;advance(bases);msg(bases===4?'💥 HOME RUN!':bases===2?'Double! Runners advance.':'Base hit!');G.batter++;G.balls=G.strikes=0;sync();setTimeout(iqMaybe,400)}else strike('Swing and miss!')}
+function strike(t){G.strikes++;msg(t);ball=null;if(G.strikes>=3){msg('Strike three — OUT!');out()}else sync()}
+function pitchMode(){fieldMode=false;$('#actions').innerHTML='<button data-p="fast">FASTBALL</button><button data-p="change">CHANGEUP</button><button data-p="curve">CURVE</button><button class="wide primary" id="pitch">PITCH</button>';let p='fast';document.querySelectorAll('[data-p]').forEach(b=>b.onclick=()=>p=b.dataset.p);$('#pitch').onclick=()=>pitch(p);msg('Choose a pitch and attack the zone.')}
+function pitch(p){let good=Math.random()>.27;ball={x:good?300+Math.random()*40:245+Math.random()*150,y:355};let sp=p==='change'?5:p==='curve'?7:9;clearInterval(timer);timer=setInterval(()=>{ball.y+=sp;if(p==='curve')ball.x+=1;if(ball.y>=500){clearInterval(timer);let strike=ball.x>285&&ball.x<355;ball=null;if(strike&&Math.random()>.38){G.strikes++;msg('Strike!');if(G.strikes>=3){msg('Strikeout!');out()}else sync()}else if(!strike){G.balls++;msg('Ball.');if(G.balls>=4){oppReach();}else sync()}else{startField()} }draw()},30)}
+function oppReach(){G.balls=G.strikes=0;if(G.bases[2])G.them++;G.bases[2]=G.bases[1];G.bases[1]=G.bases[0];G.bases[0]='OPP';msg('Walk — runner reaches.');sync()}
+function startField(){fieldMode=true;fielder={x:320,y:470};target={x:100+Math.random()*440,y:160+Math.random()*270};ball={x:target.x,y:target.y};$('#actions').innerHTML='<button data-m="l">◀</button><button data-m="u">▲</button><button data-m="r">▶</button><button data-m="dl">↙</button><button class="primary" id="glove">GLOVE</button><button data-m="dr">↘</button><button id="b1">THROW 1B</button><button id="b2">THROW 2B</button><button id="bh">HOME</button>';document.querySelectorAll('[data-m]').forEach(b=>b.onclick=()=>move(b.dataset.m));$('#glove').onclick=glove;$('#b1').onclick=()=>throwBase(1);$('#b2').onclick=()=>throwBase(2);$('#bh').onclick=()=>throwBase(0);msg('BALL IN PLAY — get to it, field it, then choose a base.');draw()}
+function move(d){let n=34;if(d.includes('l'))fielder.x-=n;if(d.includes('r'))fielder.x+=n;if(d==='u'||d==='dl'||d==='dr')fielder.y-=n;fielder.x=Math.max(60,Math.min(580,fielder.x));fielder.y=Math.max(140,Math.min(530,fielder.y));draw()}
+function glove(){if(!target)return;let d=Math.hypot(fielder.x-target.x,fielder.y-target.y);if(d<60){ball=null;target=null;msg('Clean field! Now throw to a base.');draw()}else msg('Get closer to the ball!')}
+function throwBase(b){if(ball){msg('Field the ball first!');return}let smart=(b===1);if(smart){msg('OUT at first! Nice play.');fieldMode=false;out()}else{msg('Runner safe — think about the force play.');oppReach();fieldMode=false}}
+const IQ=[['Runner on 1st, ground ball to shortstop. Best first play?',['Throw to 2B for the force','Hold the ball','Throw home'],0],['Two outs, runner on 3rd, routine grounder. What matters most?',['Get any sure out','Tag the runner only','Throw home every time'],0],['Fly ball with less than two outs. What should a baserunner do?',['Tag up before advancing','Run immediately','Leave the base early'],0],['As an outfielder, where should your throw usually go?',['Hit the cutoff','Always throw home','Hold every ball'],0]];
+function iqMaybe(){if(Math.random()>.55)showIQ()}
+function showIQ(){let q=IQ[Math.floor(Math.random()*IQ.length)];$('#iq').classList.remove('hidden');$('#iqQ').textContent=q[0];$('#iqA').innerHTML='';q[1].forEach((a,i)=>{let b=document.createElement('button');b.textContent=a;b.onclick=()=>{msg(i===q[2]?'🧠 Correct! Great baseball IQ.':'Not quite — think about the safest baseball play.');$('#iq').classList.add('hidden')};$('#iqA').appendChild(b)})}
+function lineup(){let el=$('#lineup');el.classList.toggle('hidden');$('#lineupList').innerHTML=R.map((p,i)=>`<div><span>${i+1}. #${p.num} ${p.name}</span><b>${p.pos}</b></div>`).join('')}
+$('#mainAction').onclick=atBat;$('#new').onclick=reset;$('#iqBtn').onclick=showIQ;$('#lineupBtn').onclick=lineup;$('#opp').onchange=()=>$('#oppName').textContent=$('#opp').value.toUpperCase();reset();
 </script></body></html>
