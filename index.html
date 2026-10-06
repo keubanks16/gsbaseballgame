@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>GS Baseball — 8-Bit Ballpark</title><link rel="manifest" href="manifest.webmanifest">
+<style>
+:root{--navy:#071a3d;--blue:#6bb7f5;--white:#f5f8ff;--grass:#27874c;--dirt:#c98b55;--ink:#07101f}
+*{box-sizing:border-box}body{margin:0;background:#030c20;color:var(--white);font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+header{padding:14px 16px;background:var(--navy);border-bottom:2px solid #163c72;display:flex;justify-content:space-between;gap:10px;align-items:center}
+.brand{font-weight:900;letter-spacing:1px}.brand b{color:var(--blue)}.pill{font-size:12px;border:1px solid #31588b;padding:6px 9px;border-radius:999px}
+main{max-width:900px;margin:auto;padding:14px}.panel{background:#0b2149;border:1px solid #244b80;border-radius:16px;padding:14px;margin-bottom:12px}
+.controls{display:flex;flex-wrap:wrap;gap:8px;align-items:center}button,select{font:inherit;min-height:44px;border-radius:10px;border:1px solid #31588b;background:#102d5c;color:white;padding:9px 12px}
+button.primary{background:#1774bd;font-weight:900}button.active{outline:2px solid var(--blue)}select{flex:1;min-width:190px}
+#fieldWrap{position:relative;max-width:720px;margin:auto;aspect-ratio:1/1;overflow:hidden;border:4px solid #163c72;border-radius:18px;background:#27874c}
+canvas{width:100%;height:100%;display:block;image-rendering:pixelated;touch-action:none}
+.hud{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin-top:10px}.stat{background:#071a3d;border:1px solid #244b80;border-radius:10px;text-align:center;padding:8px}.stat small{display:block;color:#91a9c9}.stat b{font-size:18px;color:#fff}
+.action{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px}.action button{font-weight:900}.wide{grid-column:span 3}
+.help{font-size:12px;color:#a9bad2;line-height:1.5}.msg{min-height:42px;text-align:center;font-weight:900;color:#fff;padding:10px}
+@media(max-width:520px){main{padding:8px}.panel{padding:10px}.hud{grid-template-columns:repeat(2,1fr)}header{font-size:13px}}
+</style></head>
+<body><header><div class="brand">GS BASEBALL <b>8-BIT BALLPARK</b></div><span class="pill">PLAY • LEARN • COMPETE</span></header>
+<main>
+<section class="panel controls">
+<select id="player"></select>
+<button data-mode="bat" class="mode active">BAT</button><button data-mode="pitch" class="mode">PITCH</button><button data-mode="field" class="mode">FIELD</button>
+</section>
+<div id="fieldWrap"><canvas id="game" width="640" height="640"></canvas></div>
+<div class="msg" id="msg">Pick your player and step to the plate!</div>
+<section class="hud">
+<div class="stat"><small>PLAYER</small><b id="who">#1 MJ</b></div>
+<div class="stat"><small>SCORE</small><b id="score">0</b></div>
+<div class="stat"><small>HITS / OUTS</small><b id="ho">0 / 0</b></div>
+<div class="stat"><small>STREAK</small><b id="streak">0</b></div>
+</section>
+<section class="panel">
+<div class="action" id="actions"></div>
+<p class="help" id="help"></p>
+</section>
+</main>
+<script>
+const roster=[{"num": "1", "name": "Micah John Eubanks", "pos": "2B"}, {"num": "2", "name": "Mason Meharg", "pos": "C"}, {"num": "3", "name": "Liam Harris", "pos": "LF"}, {"num": "4", "name": "Cas Hortman", "pos": "LC"}, {"num": "5", "name": "Landon Wilson", "pos": "RF"}, {"num": "6", "name": "ColtonLee Crosby", "pos": "1B"}, {"num": "7", "name": "Wyatt Kell", "pos": "SS"}, {"num": "13", "name": "Cash Pitts", "pos": "3B"}, {"num": "14", "name": "Wes Renfroe", "pos": "RF"}, {"num": "18", "name": "Maverick Roland", "pos": "RC"}, {"num": "27", "name": "Kade Wilson", "pos": "OF"}, {"num": "31", "name": "SJ Fairchild", "pos": "P"}];
+const cv=document.querySelector('#game'),c=cv.getContext('2d');c.imageSmoothingEnabled=false;
+const sel=document.querySelector('#player'),msg=document.querySelector('#msg'),actions=document.querySelector('#actions');
+roster.forEach((p,i)=>{let o=document.createElement('option');o.value=i;o.textContent=`#${p.num} ${p.name} · ${p.pos}`;sel.appendChild(o)});
+let mode='bat',score=0,hits=0,outs=0,streak=0,ball=null,anim=0,fieldBall={x:320,y:360},fielder={x:320,y:450};
+const short=n=>n.split(' ')[0]==='Micah'?'MJ':n.split(' ')[0];
+function diamond(){
+ c.fillStyle='#27874c';c.fillRect(0,0,640,640);
+ c.fillStyle='#c98b55';c.beginPath();c.moveTo(320,570);c.lineTo(90,330);c.lineTo(320,105);c.lineTo(550,330);c.closePath();c.fill();
+ c.fillStyle='#e7c28e';c.beginPath();c.moveTo(320,535);c.lineTo(135,330);c.lineTo(320,145);c.lineTo(505,330);c.closePath();c.fill();
+ c.fillStyle='#27874c';c.beginPath();c.arc(320,330,150,0,Math.PI*2);c.fill();
+ [[320,525],[145,330],[320,150],[495,330]].forEach(([x,y])=>{c.fillStyle='white';c.fillRect(x-8,y-8,16,16)});
+ c.strokeStyle='rgba(255,255,255,.35)';c.lineWidth=3;c.beginPath();c.moveTo(320,570);c.lineTo(45,285);c.moveTo(320,570);c.lineTo(595,285);c.stroke();
+}
+function person(x,y,label,bat=false){c.fillStyle='#071a3d';c.fillRect(x-8,y-22,16,22);c.fillStyle='#6bb7f5';c.fillRect(x-7,y-31,14,10);c.fillStyle='white';c.font='bold 13px monospace';c.textAlign='center';c.fillText(label,x,y-37);if(bat){c.strokeStyle='#e8c38c';c.lineWidth=5;c.beginPath();c.moveTo(x+8,y-20);c.lineTo(x+25,y-43);c.stroke()}}
+function draw(){
+ diamond(); const p=roster[+sel.value||0];
+ if(mode==='bat'){person(320,548,`#${p.num}`,true);person(320,355,'P'); if(ball){c.fillStyle='white';c.fillRect(ball.x-4,ball.y-4,8,8)}}
+ if(mode==='pitch'){person(320,355,`#${p.num}`);person(320,548,'BAT',true);c.strokeStyle='white';c.strokeRect(285,465,70,70);if(ball){c.fillStyle='white';c.fillRect(ball.x-4,ball.y-4,8,8)}}
+ if(mode==='field'){person(fielder.x,fielder.y,`#${p.num}`);c.fillStyle='white';c.fillRect(fieldBall.x-5,fieldBall.y-5,10,10)}
+}
+function updateHud(){let p=roster[+sel.value||0];document.querySelector('#who').textContent=`#${p.num} ${short(p.name)}`;document.querySelector('#score').textContent=score;document.querySelector('#ho').textContent=`${hits} / ${outs}`;document.querySelector('#streak').textContent=streak}
+function setMode(m){mode=m;ball=null;document.querySelectorAll('.mode').forEach(b=>b.classList.toggle('active',b.dataset.mode===m));build();draw()}
+function build(){
+ actions.innerHTML='';
+ const p=roster[+sel.value||0];
+ if(mode==='bat'){actions.innerHTML='<button class="primary wide" id="swing">SWING!</button>';document.querySelector('#help').textContent='Time your swing as the pitch reaches home plate. Better timing = harder contact.';msg.textContent=`#${p.num} ${short(p.name)} is batting.`;document.querySelector('#swing').onclick=swing;startPitch()}
+ if(mode==='pitch'){actions.innerHTML='<button data-p="fast">FASTBALL</button><button data-p="change">CHANGEUP</button><button data-p="curve">CURVE</button><button class="wide primary" id="throw">PITCH</button>';document.querySelector('#help').textContent='Choose a pitch, then tap PITCH. Hit the strike zone for points.';let pitch='fast';actions.querySelectorAll('[data-p]').forEach(b=>b.onclick=()=>{pitch=b.dataset.p;actions.querySelectorAll('[data-p]').forEach(x=>x.classList.toggle('active',x===b))});document.querySelector('#throw').onclick=()=>throwPitch(pitch)}
+ if(mode==='field'){actions.innerHTML='<button data-d="l">◀ LEFT</button><button data-d="u">▲ UP</button><button data-d="r">RIGHT ▶</button><button data-d="dl">↙</button><button class="primary" id="glove">GLOVE!</button><button data-d="dr">↘</button>';document.querySelector('#help').textContent='Move your fielder to the ball, then tap GLOVE. Get close enough to make the play.';newGrounder();actions.querySelectorAll('[data-d]').forEach(b=>b.onclick=()=>move(b.dataset.d));document.querySelector('#glove').onclick=field}
+ updateHud()
+}
+function startPitch(){if(mode!=='bat')return;ball={x:320,y:355};clearInterval(anim);anim=setInterval(()=>{if(mode!=='bat'){clearInterval(anim);return}ball.y+=7;if(ball.y>565){clearInterval(anim);outs++;streak=0;msg.textContent='Strike! You watched it go by.';updateHud();setTimeout(startPitch,650)}draw()},35)}
+function swing(){if(!ball)return;let d=Math.abs(ball.y-525);clearInterval(anim);if(d<24){hits++;streak++;let bases=d<8?4:d<15?2:1;score+=bases;msg.textContent=bases===4?'💥 HOME RUN!':bases===2?'Double! Great swing!':'Base hit!';}else{outs++;streak=0;msg.textContent='Swing and miss! Watch the timing.'}ball=null;updateHud();draw();setTimeout(startPitch,700)}
+function throwPitch(type){let accuracy=Math.random(),good=accuracy>.28;ball={x:good?320+(Math.random()*45-22):250+Math.random()*140,y:355};let speed=type==='change'?5:type==='curve'?7:9;clearInterval(anim);anim=setInterval(()=>{ball.y+=speed;ball.x+=(type==='curve'?1.2:0);if(ball.y>=500){clearInterval(anim);if(ball.x>285&&ball.x<355){score+=2;streak++;msg.textContent='STRIKE! Painted the zone.'}else{streak=0;msg.textContent='Ball — work the zone.'}ball=null;updateHud();draw()}draw()},30)}
+function newGrounder(){fieldBall={x:110+Math.random()*420,y:180+Math.random()*250};fielder={x:320,y:500};msg.textContent='Ball in play! Go get it.';draw()}
+function move(d){let n=32;if(d.includes('l'))fielder.x-=n;if(d.includes('r'))fielder.x+=n;if(d==='u'||d==='dl'||d==='dr')fielder.y-=n;fielder.x=Math.max(70,Math.min(570,fielder.x));fielder.y=Math.max(150,Math.min(530,fielder.y));draw()}
+function field(){let d=Math.hypot(fielder.x-fieldBall.x,fielder.y-fieldBall.y);if(d<55){score+=3;streak++;msg.textContent='⚾ CLEAN PLAY! You made the out.';updateHud();setTimeout(newGrounder,650)}else{streak=0;msg.textContent='Not close enough — get your glove to the ball!';updateHud()}}
+document.querySelectorAll('.mode').forEach(b=>b.onclick=()=>setMode(b.dataset.mode));sel.onchange=()=>{updateHud();build();draw()};build();draw();
+</script></body></html>

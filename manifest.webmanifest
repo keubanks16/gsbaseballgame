@@ -1,0 +1,8 @@
+{
+  "name": "GS Baseball 8-Bit Ballpark",
+  "short_name": "GS Ballpark",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#030c20",
+  "theme_color": "#071a3d"
+}
