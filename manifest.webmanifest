@@ -1,8 +1,8 @@
 {
-  "name": "GS Baseball 8-Bit Ballpark",
-  "short_name": "GS Ballpark",
+  "name": "GS Baseball Pixel Diamond",
+  "short_name": "Pixel Diamond",
   "start_url": "./",
   "display": "standalone",
-  "background_color": "#030c20",
-  "theme_color": "#071a3d"
+  "background_color": "#061329",
+  "theme_color": "#081d40"
 }
