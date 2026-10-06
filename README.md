@@ -1,23 +1,16 @@
-# GS Baseball — Real Game Engine v1
+# GS Baseball Game — Real-Time v2
 
-A from-scratch real-time baseball game for mobile/GitHub Pages.
+Rebuilt toward continuous video-game play.
 
-Gameplay systems:
-- Continuous real-time game loop
-- Live pitch movement and timing-based hitting
-- Normal swing, power swing, bunt, take
-- Ball flight with height, gravity and bounces
-- Batters/runners physically move around the bases
-- Advance, hold, return and slide controls
-- Defensive AI moves toward live batted balls
-- Joystick-controlled selected fielder
-- Ball pickup/catch detection
-- Manual throws to 1B, 2B, 3B and home
-- Throw animation and ball travel
-- Safe/out decisions based on runner vs ball arrival
-- Tag-out proximity logic
-- Pitch selection and 3x3 pitch-location target
-- Counts, strikeouts, walks, outs, side changes and innings
-- GS roster included
-
-This is the new engine foundation; upload all files to the root of the GitHub Pages repository.
+Changes:
+- PLAY GAME disappears after starting.
+- No START AT-BAT button between pitches/plays.
+- Pitch -> swing/contact -> baserunning -> fielding -> throw -> safe/out -> next play flows automatically.
+- Batter immediately runs on contact.
+- Existing runners advance simultaneously.
+- CPU defenders pursue the live ball and make throws.
+- User fields with joystick when GS is on defense.
+- More realistic human player sprites: head/skin, cap, jersey, arms, animated legs, uniform colors, jersey numbers.
+- Runner and fielder running animation.
+- Ball height, gravity, bounce and visible throw travel.
+- Pitching and fielding controls remain contextual.
