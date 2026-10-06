@@ -1,8 +1,8 @@
 {
-  "name": "GS Baseball Pixel Diamond",
-  "short_name": "Pixel Diamond",
+  "name": "GS Baseball Real Game",
+  "short_name": "GS Baseball",
   "start_url": "./",
   "display": "standalone",
-  "background_color": "#061329",
-  "theme_color": "#081d40"
+  "background_color": "#030b1b",
+  "theme_color": "#071b3b"
 }
