@@ -1,18 +1,15 @@
-# GS Baseball Pixel Diamond
+# GS Baseball Pixel Diamond — Running Bases Edition
 
-Built from scratch as a touch-controlled retro baseball arcade game.
+More interactive version built from scratch.
 
-## Interaction
-- Real-time animation loop
-- On-screen analog joystick for fielding
-- Timing-based swing mechanic
-- Ball physics on batted balls
-- Pitch selection on defense
-- Automatic nearest-fielder selection
-- Chase and field live balls
-- Throw decisions to 1B, 2B, 3B, or home
-- Balls, strikes, outs, innings, bases, score
-- Full Game, Home Run Derby, and Fielding Lab
-- GS roster built in
+New in this version:
+- Players visibly run from home to 1B, 2B, 3B and home.
+- Multiple runners can move at the same time.
+- Runners score only after physically reaching home.
+- Manual SEND RUNNER, HOLD, SLIDE and GO BACK controls.
+- Defensive throws visibly travel through the field to the selected base.
+- Fielders remain joystick controlled.
+- Timing-based batting and moving batted balls.
+- Pitching, innings, counts, outs, score, Home Run Derby and Fielding Lab.
 
-This is a standalone GitHub Pages app. Upload all files to the root of the repository.
+Upload the files to the root of the GitHub Pages repository.

@@ -27,9 +27,26 @@ function buildFielders(){S.fielders=R.slice(0,9).map((p,i)=>{let q=pos[p.pos]||[
 function field(){x.fillStyle='#287e45';x.fillRect(0,0,720,720);x.fillStyle='#c68a54';x.beginPath();x.moveTo(360,650);x.lineTo(90,380);x.lineTo(360,110);x.lineTo(630,380);x.closePath();x.fill();x.fillStyle='#e7c28f';x.beginPath();x.moveTo(360,610);x.lineTo(135,380);x.lineTo(360,155);x.lineTo(585,380);x.closePath();x.fill();x.fillStyle='#287e45';x.beginPath();x.arc(360,380,175,0,7);x.fill();x.strokeStyle='#fff8';x.lineWidth=3;x.beginPath();x.moveTo(360,660);x.lineTo(35,325);x.moveTo(360,660);x.lineTo(685,325);x.stroke();[[360,610],[145,380],[360,165],[575,380]].forEach(q=>{x.fillStyle='white';x.fillRect(q[0]-9,q[1]-9,18,18)})}
 function sprite(px,py,label,team=true){x.fillStyle=team?'#071b3b':'#8b2635';x.fillRect(px-10,py-18,20,25);x.fillStyle=team?'#71bdf5':'#eee';x.fillRect(px-9,py-30,18,12);x.fillStyle='#fff';x.font='bold 12px monospace';x.textAlign='center';x.fillText(label,px,py-37)}
 function draw(){field();if(S.half===1||$('#mode').value==='field'){S.fielders.forEach(f=>sprite(f.x,f.y,'#'+f.p.num,true));if(controlled){x.strokeStyle='#fff';x.lineWidth=3;x.strokeRect(controlled.x-15,controlled.y-35,30,45)}}else{sprite(360,625,'#'+R[S.batter%R.length].num,true);sprite(360,390,'P',false)}
-if(ball){x.fillStyle='white';x.fillRect(ball.x-5,ball.y-5,10,10)}S.runners.forEach(r=>sprite(r.x,r.y,'R',true))}
+if(ball){x.fillStyle='white';x.fillRect(ball.x-5,ball.y-5,10,10)}S.runners.forEach(r=>sprite(r.x,r.y,'#'+(r.num||''),true));
+/* runner trails / destinations */
+S.runners.forEach(r=>{if(r.path&&r.path.length){let q=r.path[0];x.strokeStyle='#ffffff55';x.setLineDash([5,6]);x.beginPath();x.moveTo(r.x,r.y);x.lineTo(q[0],q[1]);x.stroke();x.setLineDash([])}})}
 function loop(t){let dt=Math.min(.033,(t-last)/1000||.016);last=t;update(dt);draw();raf=requestAnimationFrame(loop)}
-function update(dt){if(controlled){let dx=(keys.ArrowRight?1:0)-(keys.ArrowLeft?1:0)+joy.x,dy=(keys.ArrowDown?1:0)-(keys.ArrowUp?1:0)+joy.y;let m=Math.hypot(dx,dy);if(m>.1){controlled.x+=dx/m*190*dt;controlled.y+=dy/m*190*dt;controlled.x=Math.max(45,Math.min(675,controlled.x));controlled.y=Math.max(80,Math.min(650,controlled.y))}}
+function updateRunners(dt){
+  const speed=185;
+  for(let i=S.runners.length-1;i>=0;i--){
+    let r=S.runners[i]; if(!r.path||!r.path.length) continue;
+    let q=r.path[0],dx=q[0]-r.x,dy=q[1]-r.y,d=Math.hypot(dx,dy);
+    if(d<8){
+      r.x=q[0];r.y=q[1];r.path.shift();
+      if(!r.path.length){
+        if(r.dest===4){ if(S.half===0)S.gs++; else S.opp++; S.runners.splice(i,1); say('RUN SCORES!'); }
+        else { r.base=r.dest; }
+        ui();
+      }
+    }else{r.x+=dx/d*speed*dt;r.y+=dy/d*speed*dt}
+  }
+}
+function update(dt){updateRunners(dt);if(controlled){let dx=(keys.ArrowRight?1:0)-(keys.ArrowLeft?1:0)+joy.x,dy=(keys.ArrowDown?1:0)-(keys.ArrowUp?1:0)+joy.y;let m=Math.hypot(dx,dy);if(m>.1){controlled.x+=dx/m*190*dt;controlled.y+=dy/m*190*dt;controlled.x=Math.max(45,Math.min(675,controlled.x));controlled.y=Math.max(80,Math.min(650,controlled.y))}}
 if(phase==='pitch'&&ball){pitchT+=dt;ball.y+=260*dt;if(ball.y>=610){calledStrike()}}
 if(phase==='hit'&&ball){ball.x+=ball.vx*dt;ball.y+=ball.vy*dt;ball.vy+=120*dt;if(ball.y>690||ball.x<15||ball.x>705)resolveHit();if(S.half===1)chooseFielder()}
 if(phase==='field'&&ball){ball.x+=ball.vx*dt;ball.y+=ball.vy*dt;ball.vx*=.985;ball.vy*=.985;if(controlled&&Math.hypot(controlled.x-ball.x,controlled.y-ball.y)<24){phase='throw';ball.vx=ball.vy=0;ball.x=controlled.x;ball.y=controlled.y-10;say('FIELD IT! Choose a base to throw to.');throwButtons()}}}
@@ -38,17 +55,51 @@ function swing(){if(phase!=='pitch'||!ball)return;let d=Math.abs(ball.y-600);if(
 function calledStrike(){ball=null;phase='ready';S.strikes++;say('Called strike.');if(S.strikes>=3)makeOut();else setTimeout(startAB,500);ui()}
 function resolveHit(){if(!ball)return;let q=contact||.3,hr=q>.83&&ball.y<250;ball=null;phase='ready';if($('#mode').value==='hr'){S.derby+=hr?1:0;say(hr?`💥 HOME RUN! Derby total: ${S.derby}`:'Not enough — try again!');setTimeout(startAB,700);return}
 let bases=hr?4:q>.62?2:1;scoreHit(bases);setTimeout(startAB,700)}
-function scoreHit(n){let runs=0;if(n===4){runs=1+S.bases.filter(Boolean).length;S.bases=[0,0,0]}else{for(let k=0;k<n;k++){if(S.bases[2])runs++;S.bases[2]=S.bases[1];S.bases[1]=S.bases[0];S.bases[0]=0}S.bases[n-1]=1}S.gs+=runs;S.batter=(S.batter+1)%R.length;S.balls=S.strikes=0;say(n===4?`HOME RUN! ${runs} run${runs===1?'':'s'} score!`:n===2?'DOUBLE!':'BASE HIT!');ui()}
-function makeOut(){S.outs++;S.balls=S.strikes=0;S.batter=(S.batter+1)%R.length;if(S.outs>=3){S.half=1;S.outs=0;S.bases=[0,0,0];say('SIDE RETIRED — take the field!');setTimeout(defense,800)}else setTimeout(startAB,600);ui()}
+function routeFor(from,to){
+ const B=[[360,610],[575,380],[360,165],[145,380],[360,610]];
+ let arr=[];for(let b=from+1;b<=to;b++)arr.push(B[Math.min(b,4)]);return arr
+}
+function sendRunner(r,to){r.dest=to;r.path=routeFor(r.base||0,to)}
+function scoreHit(n){
+ let hitter=R[S.batter%R.length], existing=S.runners.slice();
+ // Existing runners advance the number of bases earned.
+ existing.forEach(r=>sendRunner(r,Math.min(4,(r.base||1)+n)));
+ let nr={num:hitter.num,x:360,y:610,base:0,dest:Math.min(4,n),path:routeFor(0,Math.min(4,n))};
+ S.runners.push(nr);
+ S.batter=(S.batter+1)%R.length;S.balls=S.strikes=0;
+ say(n===4?'💥 HOME RUN — WATCH THEM RUN!':n===2?'DOUBLE — RUNNERS MOVING!':'BASE HIT — GO GO GO!');
+ syncBasesFromRunners();ui();setTimeout(runnerControls,150)
+}
+function syncBasesFromRunners(){S.bases=[0,0,0];S.runners.forEach(r=>{if(r.base>=1&&r.base<=3&&!r.path.length)S.bases[r.base-1]=1})}
+function makeOut(){S.outs++;S.balls=S.strikes=0;S.batter=(S.batter+1)%R.length;if(S.outs>=3){S.half=1;S.outs=0;S.bases=[0,0,0];S.runners=[];say('SIDE RETIRED — take the field!');setTimeout(defense,800)}else setTimeout(startAB,600);ui()}
 function defense(){S.half=1;phase='defense';showPads(false,false);$('#buttons').innerHTML='<button id="fast">FASTBALL</button><button id="change">CHANGE</button><button id="curve">CURVE</button><button class="wide" id="pitchBtn">PITCH</button>';let pt='fast';['fast','change','curve'].forEach(id=>$('#'+id).onclick=()=>pt=id);$('#pitchBtn').onclick=()=>oppPitch(pt);ui()}
 function oppPitch(pt){phase='oppPitch';say('Pitch delivered...');setTimeout(()=>{let r=Math.random();if(r<.32){say('Strike!');S.strikes++;if(S.strikes>=3)defOut();else defense()}else if(r<.48){S.balls++;say('Ball.');if(S.balls>=4)oppReach();else defense()}else{let a=Math.random()*Math.PI+.05,sp=180+Math.random()*180;ball={x:360,y:390,vx:Math.cos(a)*sp,vy:-Math.abs(Math.sin(a)*sp)};phase='field';controlled=null;say('BALL IN PLAY — move to it!');showPads(true,true)}ui()},450)}
 function chooseFielder(){if(controlled||!ball)return;controlled=S.fielders.reduce((a,b)=>Math.hypot(b.x-ball.x,b.y-ball.y)<Math.hypot(a.x-ball.x,a.y-ball.y)?b:a);showPads(true,true)}
 function throwButtons(){showPads(true,true);$('#aBtn').textContent='1B';$('#bBtn').textContent='2B';$('#aBtn').onclick=()=>throwTo(1);$('#bBtn').onclick=()=>throwTo(2);$('#buttons').innerHTML='<button id="third">THROW 3B</button><button id="home">THROW HOME</button>';$('#third').onclick=()=>throwTo(3);$('#home').onclick=()=>throwTo(0)}
-function throwTo(base){if(phase!=='throw')return;phase='defense';ball=null;controlled=null;let correct=base===1||Math.random()>.65;if(correct){say('OUT! Great decision.');defOut()}else{say('SAFE! Wrong base — runner advances.');oppReach()}}
+function throwTo(base){
+ if(phase!=='throw')return;
+ const B=[[360,610],[575,380],[360,165],[145,380]],q=B[base];
+ phase='ballThrow';let sx=controlled.x,sy=controlled.y;ball={x:sx,y:sy,vx:0,vy:0};
+ let dur=0;
+ clearInterval(window.throwAnim);window.throwAnim=setInterval(()=>{
+   dur+=.04;ball.x=sx+(q[0]-sx)*Math.min(1,dur/.45);ball.y=sy+(q[1]-sy)*Math.min(1,dur/.45);
+   if(dur>=.45){clearInterval(window.throwAnim);ball=null;controlled=null;let correct=base===1||Math.random()>.62;
+     if(correct){say('OUT! Throw beats the runner!');defOut()}else{say('SAFE! Runner beats the throw.');oppReach()}
+   }
+ },40)
+}
 function defOut(){S.outs++;S.balls=S.strikes=0;if(S.outs>=3){S.inning++;S.half=0;S.outs=0;S.bases=[0,0,0];controlled=null;say(`Inning ${S.inning} — GS back to bat!`);buttonsReady()}else defense();ui()}
 function oppReach(){S.opp++;S.balls=S.strikes=0;say('Runner scores. Reset and get the next hitter.');defense();ui()}
 function fieldDrill(){S.half=1;phase='field';let a=Math.random()*Math.PI+.05;ball={x:360,y:390,vx:Math.cos(a)*(180+Math.random()*180),vy:-Math.abs(Math.sin(a)*(180+Math.random()*180))};controlled=null;say('FIELDING LAB — chase it down!');showPads(true,true)}
 function showPads(stick,acts){$('#stick').style.display=stick?'block':'none';$('#actionPad').style.display=acts?'flex':'none';if(acts){$('#aBtn').onclick=swing;$('#bBtn').onclick=()=>{};$('#aBtn').textContent='SWING';$('#bBtn').textContent='THROW'}}
+function runnerControls(){
+ if(S.half!==0||!S.runners.length)return;
+ $('#buttons').innerHTML='<button id="advance">SEND RUNNER</button><button id="hold">HOLD</button><button id="slide">SLIDE</button><button id="retreat">GO BACK</button>';
+ $('#advance').onclick=()=>{let r=S.runners[S.runners.length-1];if(r&&!r.path.length&&r.base<3){sendRunner(r,r.base+1);say('RUNNER GOING!')}}
+ $('#hold').onclick=()=>say('Runner holding the base.');
+ $('#slide').onclick=()=>{let r=S.runners[S.runners.length-1];if(r&&r.path.length){r.slide=true;say('SLIDE!')}};
+ $('#retreat').onclick=()=>{let r=S.runners[S.runners.length-1];if(r&&r.path.length&&r.base>=1){r.path=routeFor(r.base-1,r.base).reverse();r.dest=r.base-1;say('GET BACK!')}};
+}
 function buttonsReady(){$('#buttons').innerHTML='<button class="wide" id="play">PLAY BALL</button>';$('#play').onclick=startAB;showPads(false,false);ui()}
 function say(s){$('#message').textContent=s}
 function ui(){$('#gs').textContent=S.gs;$('#opp').textContent=S.opp;$('#inning').textContent=S.inning;$('#half').textContent=S.half?'BOT':'TOP';$('#outs').textContent=S.outs;$('#count').textContent=`${S.balls}-${S.strikes}`;$('#who').textContent=`#${R[S.batter%R.length].num} ${R[S.batter%R.length].name}`}
